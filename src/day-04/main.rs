@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::io;
 use regex::Regex;
 
@@ -51,34 +51,32 @@ impl Card {
 
 fn main() {
     let mut buffer = String::new();
-    let mut total_score: u128 = 0;
-    let mut cards = vec![];
+    let mut total_score = 0;
+    let mut next_copies = VecDeque::with_capacity(5);
+    let mut total_copies = 0;
 
     while io::stdin().read_line(&mut buffer).unwrap() != 0 {
         let card = Card::parse(buffer.trim()).unwrap();
 
+        let current_copies = next_copies.pop_front()
+            .or(Some(1))
+            .unwrap();
+        let count = card.winning_count();
+
+        for n in 0..count {
+            if let Some(queue_item) = next_copies.get_mut(n) {
+                *queue_item += current_copies;
+            } else {
+                next_copies.push_back(current_copies + 1);
+            }
+        }
+
+        total_copies += current_copies;
         total_score += card.score();
-        cards.push((1, card));
 
         buffer.clear();
     }
 
-    for index in 0..cards.len() {
-        let count = cards[index].1.winning_count();
-
-        for n in 0..count {
-            let next_index = index + n + 1;
-
-            if next_index < cards.len() {
-                cards[index + n + 1].0 += cards[index].0;
-            }
-        }
-    }
-
-    let total_cards: u128 = cards.iter()
-        .map(|(copies, _)| copies)
-        .sum();
-
     println!("total score = {}", total_score);
-    println!("total cards = {}", total_cards);
+    println!("total cards = {}", total_copies);
 }
