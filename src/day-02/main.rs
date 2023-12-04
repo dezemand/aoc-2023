@@ -1,4 +1,5 @@
 use std::io;
+use std::num::ParseIntError;
 
 use regex::Regex;
 
@@ -22,7 +23,7 @@ struct Game {
 #[derive(Debug)]
 enum GameError {
     NoGameId,
-    InvalidGameId,
+    InvalidGameId(ParseIntError),
 }
 
 impl Game {
@@ -31,7 +32,8 @@ impl Game {
 
         let game_id = game_split[0].strip_prefix("Game ")
             .ok_or_else(|| NoGameId)?
-            .parse::<u16>().map_err(|_| InvalidGameId)?;
+            .parse::<u16>()
+            .map_err(|err| InvalidGameId(err))?;
 
         let mut game = Game {
             id: game_id,
@@ -44,9 +46,7 @@ impl Game {
             .split(game_split[1].trim())
             .map(|item| item.split(" ").collect::<Vec<&str>>())
             .map(|vec| (vec[0].parse::<u16>().unwrap(), vec[1]))
-            .collect::<Vec<(u16, &str)>>()
-            .iter()
-            .for_each(|(amount, cube_type)| game.add_hand(*amount, cube_type));
+            .for_each(|(amount, cube_type)| game.add_hand(amount, cube_type));
 
         Ok(game)
     }
