@@ -1,7 +1,20 @@
+use std::collections::HashSet;
 use std::io;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 struct Position(i32, i32);
+
+#[derive(Debug, Copy, Clone)]
+enum Direction { Left, Right }
+
+impl Position {
+    pub fn go(&self, direction: Direction) -> Position {
+        match direction {
+            Direction::Left => Position(self.0 - 1, self.1),
+            Direction::Right => Position(self.0 + 1, self.1)
+        }
+    }
+}
 
 fn get_surrounding_positions(position: Position, width: usize, height: usize) -> Vec<Position> {
     let mut positions = vec![];
@@ -24,22 +37,7 @@ fn get_surrounding_positions(position: Position, width: usize, height: usize) ->
     positions
 }
 
-#[derive(Debug)]
-struct EngineSchematicPart {
-    part: char,
-    position: Position,
-}
-
-impl EngineSchematicPart {
-    pub fn new(part: char, x: i32, y: i32) -> Self {
-        EngineSchematicPart {
-            part,
-            position: Position(x, y)
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 struct EngineSchematicNumber {
     number: u16,
     position: Position,
@@ -144,15 +142,70 @@ impl<'a> EngineSchematic<'a> {
             .collect()
     }
 
-    pub fn get_gear_ratio(&self, _: &Position) -> Option<u128> {
-        // let positions = get_surrounding_positions(position.clone(), 1, 1);
+    pub fn get_gear_ratio(&self, position: &Position) -> Option<u128> {
+        let positions = get_surrounding_positions(position.clone(), 1, 1);
 
-        // positions
-        //     .iter()
-        //     .filter(|position| self.is_in_bounds(position))
-        //     .map(|position| )
+        let surrounding: HashSet<EngineSchematicNumber> = positions
+            .iter()
+            .filter(|position| self.is_in_bounds(position))
+            .map(|position| self.find_number(position))
+            .filter(|number| number.is_some())
+            .map(|number| number.unwrap())
+            .collect();
 
-        Some(1)
+        if surrounding.len() == 2 {
+            Some(surrounding.iter()
+                .map(|number| number.number as u128)
+                .product()
+            )
+        } else {
+            None
+        }
+    }
+
+    fn find_number(&self, position: &Position) -> Option<EngineSchematicNumber> {
+        let starting_char = self.get_char(position);
+
+        if !starting_char.is_ascii_digit() {
+            return None;
+        }
+
+        let mut characters = vec![starting_char];
+        let mut left_pos = *position;
+        loop {
+            left_pos = left_pos.go(Direction::Left);
+            if !self.is_in_bounds(&left_pos) {
+                break;
+            }
+
+            let char = self.get_char(&left_pos);
+            if char.is_ascii_digit() {
+                characters.insert(0, char);
+            } else {
+                break;
+            }
+        }
+
+        let mut right_pos = *position;
+        loop {
+            right_pos = right_pos.go(Direction::Right);
+            if !self.is_in_bounds(&right_pos) {
+                break;
+            }
+
+            let char = self.get_char(&right_pos);
+            if char.is_ascii_digit() {
+                characters.push(char);
+            } else {
+                break;
+            }
+        }
+
+        Some(EngineSchematicNumber::new(
+            &String::from_iter(characters),
+            left_pos.0,
+            left_pos.1,
+        ))
     }
 }
 
