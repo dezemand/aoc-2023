@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::io;
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum Direction { Left, Right }
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 struct Position(i32, i32);
-
-#[derive(Debug, Copy, Clone)]
-enum Direction { Left, Right }
 
 impl Position {
     pub fn go(&self, direction: Direction) -> Position {
@@ -14,27 +14,27 @@ impl Position {
             Direction::Right => Position(self.0 + 1, self.1)
         }
     }
-}
 
-fn get_surrounding_positions(position: Position, width: usize, height: usize) -> Vec<Position> {
-    let mut positions = vec![];
+    pub fn surrounding(&self, width: usize, height: usize) -> Vec<Self> {
+        let mut positions = vec![];
 
-    let start_x = position.0 - 1;
-    let stop_x = position.0 + width as i32;
-    let start_y = position.1 - 1;
-    let stop_y = position.1 + height as i32;
+        let start_x = self.0 - 1;
+        let stop_x = self.0 + width as i32;
+        let start_y = self.1 - 1;
+        let stop_y = self.1 + height as i32;
 
-    for x in start_x..=stop_x {
-        positions.push(Position(x, start_y));
-        positions.push(Position(x, stop_y));
+        for x in start_x..=stop_x {
+            positions.push(Position(x, start_y));
+            positions.push(Position(x, stop_y));
+        }
+
+        for y in (start_y + 1)..stop_y {
+            positions.push(Position(start_x, y));
+            positions.push(Position(stop_x, y));
+        }
+
+        positions
     }
-
-    for y in (start_y + 1)..stop_y {
-        positions.push(Position(start_x, y));
-        positions.push(Position(stop_x, y));
-    }
-
-    positions
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -131,7 +131,7 @@ impl<'a> EngineSchematic<'a> {
     }
 
     pub fn get_surrounding_parts(&self, number: &EngineSchematicNumber) -> Vec<(Position, char)> {
-        let positions = get_surrounding_positions(number.position, number.width, number.height);
+        let positions = number.position.surrounding(number.width, number.height);
 
         positions
             .iter()
@@ -143,7 +143,7 @@ impl<'a> EngineSchematic<'a> {
     }
 
     pub fn get_gear_ratio(&self, position: &Position) -> Option<u128> {
-        let positions = get_surrounding_positions(position.clone(), 1, 1);
+        let positions = position.surrounding(1, 1);
 
         let surrounding: HashSet<EngineSchematicNumber> = positions
             .iter()
