@@ -96,5 +96,5 @@ fn main() {
     }
 
     println!("total possible = {}", total_possible);
-    println!("total power = {}", total_power);
+    println!("total power    = {}", total_power);
 }
